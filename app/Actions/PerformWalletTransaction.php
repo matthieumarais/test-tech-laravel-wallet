@@ -47,6 +47,8 @@ readonly class PerformWalletTransaction
         } else {
             $wallet->decrement('balance', $amount);
         }
+
+        $this->checkLowBalance($wallet);
     }
 
     /**
@@ -56,6 +58,18 @@ readonly class PerformWalletTransaction
     {
         if ($wallet->balance < $amount) {
             throw new InsufficientBalance($wallet, $amount);
+        }
+    }
+
+    protected function checkLowBalance(Wallet $wallet): void
+    {
+        if ($wallet->balance < 1000 && $wallet->low_balance_notified_at === null) {
+            $wallet->user->notify(new \App\Notifications\LowBalanceNotification());
+            $wallet->update(['low_balance_notified_at' => now()]);
+        }
+
+        if ($wallet->balance >= 1000 && $wallet->low_balance_notified_at !== null) {
+            $wallet->update(['low_balance_notified_at' => null]);
         }
     }
 }
